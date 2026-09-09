@@ -1,0 +1,23 @@
+- 首页
+    - [欢迎页](/)
+
+- appstore
+    - [电教应用商店(From YaoYue)](/apps/appstore/appstore.md)
+- tools
+    - [mcpfp](/apps/tools/mcpfp/launcher.md)
+    - [beatcode](/apps/tools/beatcode/launcher.md)
+- linux
+    - [alpine](/apps/linux/alpine/launcher.md)
+- games
+    - [Minecraft](https://www.minecraft.net/zh-hans)
+        - [Eaglercraft_IR_1.12.2](/apps/games/Minecraft/Eaglercraft_IR_1.12.2/launcher.md)
+        - [Eaglercraft_IR_1.12.2wasm](/apps/games/Minecraft/Eaglercraft_IR_1.12.2wasm/launcher.md)
+        - [Eaglercraft_IR_1.8.8](/apps/games/Minecraft/Eaglercraft_IR_1.8.8/launcher.md)
+        - [Eaglercraft_IR_1.8.8wasm](/apps/games/Minecraft/Eaglercraft_IR_1.8.8wasm/launcher.md)
+        - [Eaglercraft_IR_p1.12.2](/apps/games/Minecraft/Eaglercraft_IR_p1.12.2/launcher.md)
+        - [Eaglercraft_IR_p1.12.2wasm](/apps/games/Minecraft/Eaglercraft_IR_p1.12.2wasm/launcher.md)
+        - [Eaglercraft_IR_p1.8.8](/apps/games/Minecraft/Eaglercraft_IR_p1.8.8/launcher.md)
+        - [Eaglercraft_IR_p1.8.8wasm](/apps/games/Minecraft/Eaglercraft_IR_p1.8.8wasm/launcher.md)
+        - [Eaglercraft_IR_tf1.12.2](/apps/games/Minecraft/Eaglercraft_IR_tf1.12.2/launcher.md)
+        - [Eaglercraft_IR_tf1.12.2wasm](/apps/games/Minecraft/Eaglercraft_IR_tf1.12.2wasm/launcher.md)
+    - [papercode](/apps/games/papercode/launcher.md)

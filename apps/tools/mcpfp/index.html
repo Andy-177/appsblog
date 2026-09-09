@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft皮肤头像生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#8B5CF6',
+                        dark: '#1F2937',
+                        light: '#F3F4F6'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .shadow-custom {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            }
+            .transition-custom {
+                transition: all 0.3s ease;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-light to-gray-200 min-h-screen font-sans text-dark">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <!-- 头部标题 -->
+        <header class="text-center mb-10">
+            <h1 class="text-[clamp(2rem,5vw,3rem)] font-bold text-dark mb-2">
+                <i class="fa fa-picture-o text-primary mr-3"></i>Minecraft皮肤头像生成器
+            </h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">上传64x64的Minecraft皮肤文件，生成个性化头像，支持自定义背景和阴影效果</p>
+        </header>
+
+        <!-- 主要内容区 - 单栏布局 -->
+        <main class="space-y-8">
+            <!-- 第一部分：上传和设置区域 -->
+            <div class="bg-white rounded-xl shadow-custom p-6">
+                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                    <i class="fa fa-cogs text-primary mr-2"></i>设置
+                </h2>
+                
+                <!-- 文件上传区域 -->
+                <div class="mb-6">
+                    <label for="skinUpload" class="block text-gray-700 mb-2 font-medium">上传皮肤文件 (64x64 PNG)</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-custom cursor-pointer" id="dropArea">
+                        <i class="fa fa-cloud-upload text-4xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-500">拖放文件到这里，或<span class="text-primary font-medium">点击选择</span></p>
+                        <input type="file" id="skinUpload" accept="image/png" class="hidden" />
+                        <p id="fileInfo" class="mt-2 text-sm text-gray-500 hidden"></p>
+                    </div>
+                    <p id="fileError" class="mt-2 text-sm text-red-500 hidden"></p>
+                    <p id="shadowError" class="mt-2 text-sm text-orange-500 hidden"></p>
+                </div>
+                
+                <!-- 背景设置 -->
+                <div class="mb-6" id="backgroundSettings" style="display: none;">
+                    <h3 class="text-lg font-medium mb-3 flex items-center">
+                        <i class="fa fa-image text-primary mr-2"></i>背景设置
+                    </h3>
+                    <div class="flex items-center mb-3">
+                        <input type="radio" id="transparentBg" name="bgType" value="transparent" checked class="mr-2">
+                        <label for="transparentBg">透明背景</label>
+                    </div>
+                    <div class="flex items-center mb-3">
+                        <input type="radio" id="colorBg" name="bgType" value="color" class="mr-2">
+                        <label for="colorBg">纯色背景</label>
+                    </div>
+                    <div class="flex items-center mb-3" id="gradientOption">
+                        <input type="radio" id="gradientBg" name="bgType" value="gradient" class="mr-2">
+                        <label for="gradientBg">渐变背景 (300x300专用)</label>
+                    </div>
+                    <div id="colorPickerContainer" class="mt-3 hidden">
+                        <label class="block text-gray-700 mb-2">选择背景颜色</label>
+                        <div class="flex items-center">
+                            <input type="color" id="bgColor" value="#ffffff" class="w-10 h-10 border border-gray-300 rounded">
+                            <div class="ml-3 flex-1">
+                                <label for="bgHex" class="block text-xs text-gray-500 mb-1">十六进制 (例如: #FF0000)</label>
+                                <input type="text" id="bgHex" value="#ffffff" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="#RRGGBB">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="gradientPickerContainer" class="mt-3 hidden space-y-3">
+                        <label class="block text-gray-700 mb-2">选择渐变颜色 (仅300x300可见效果)</label>
+                        <div class="flex items-center">
+                            <input type="color" id="gradientColor1" value="#ffffff" class="w-10 h-10 border border-gray-300 rounded">
+                            <div class="ml-3 flex-1">
+                                <label for="gradientHex1" class="block text-xs text-gray-500 mb-1">渐变起点颜色</label>
+                                <input type="text" id="gradientHex1" value="#ffffff" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="#RRGGBB">
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="color" id="gradientColor2" value="#000000" class="w-10 h-10 border border-gray-300 rounded">
+                            <div class="ml-3 flex-1">
+                                <label for="gradientHex2" class="block text-xs text-gray-500 mb-1">渐变终点颜色 (右下角)</label>
+                                <input type="text" id="gradientHex2" value="#000000" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="#RRGGBB">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 阴影设置 -->
+                <div class="mb-6" id="shadowSettings" style="display: none;">
+                    <h3 class="text-lg font-medium mb-3 flex items-center">
+                        <i class="fa fa-moon-o text-primary mr-2"></i>阴影设置
+                    </h3>
+                    <div class="flex items-center mb-3">
+                        <input type="checkbox" id="skinShadow" class="mr-2">
+                        <label for="skinShadow">添加皮肤阴影</label>
+                    </div>
+                    <div class="flex items-center mb-3" id="dropShadowContainer">
+                        <input type="checkbox" id="dropShadow" class="mr-2">
+                        <label for="dropShadow">添加头像阴影 (300x300专用)</label>
+                    </div>
+                </div>
+                
+                <!-- 尺寸设置 -->
+                <div class="mb-6" id="sizeSettings" style="display: none;">
+                    <h3 class="text-lg font-medium mb-3 flex items-center">
+                        <i class="fa fa-arrows-alt text-primary mr-2"></i>尺寸设置
+                    </h3>
+                    <div class="flex flex-col space-y-3">
+                        <div class="flex items-center">
+                            <input type="radio" id="size300" name="avatarSize" value="300" checked class="mr-2">
+                            <label for="size300">300x300 像素 (支持渐变和头像阴影)</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="size20" name="avatarSize" value="20" class="mr-2">
+                            <label for="size20">20x20 像素 (仅支持纯色/透明背景)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 生成按钮 -->
+                <button id="generateBtn" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-custom flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fa fa-magic mr-2"></i>生成头像
+                </button>
+            </div>
+            
+            <!-- 第二部分：预览和结果区域 -->
+            <div class="bg-white rounded-xl shadow-custom p-6">
+                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                    <i class="fa fa-eye text-primary mr-2"></i>预览
+                </h2>
+                
+                <!-- 原始皮肤预览 -->
+                <div class="mb-6" id="originalSkinContainer" style="display: none;">
+                    <h3 class="text-lg font-medium mb-2">原始皮肤</h3>
+                    <div class="bg-gray-100 rounded-lg p-4 flex justify-center">
+                        <canvas id="originalSkinCanvas" width="64" height="64" class="border border-gray-200"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 处理后的头像预览 -->
+                <div class="mb-6" id="resultContainer" style="display: none;">
+                    <h3 class="text-lg font-medium mb-2">生成结果</h3>
+                    <div class="bg-gray-100 rounded-lg p-4 flex justify-center">
+                        <canvas id="resultCanvas" width="300" height="300" class="border border-gray-200"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 下载按钮 -->
+                <div id="downloadContainer" style="display: none;">
+                    <a id="downloadLink" href="#" download="minecraft_avatar.png" class="w-full inline-block bg-secondary hover:bg-secondary/90 text-white font-medium py-3 px-4 rounded-lg transition-custom text-center">
+                        <i class="fa fa-download mr-2"></i>下载头像
+                    </a>
+                </div>
+                
+                <!-- 步骤提示 -->
+                <div id="stepsContainer" class="text-center text-gray-600">
+                    <div class="flex flex-col items-center justify-center h-64">
+                        <i class="fa fa-upload text-5xl text-gray-300 mb-4"></i>
+                        <p>请先上传64x64的PNG皮肤文件</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- 页脚 -->
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>© 2023 Minecraft皮肤头像生成器 | 使用HTML5 Canvas技术</p>
+        </footer>
+    </div>
+
+    <script>
+        // 全局变量
+        let skinImage = null;
+        let skinShadowImage = null;
+        let dropShadowImage = null;
+        let shadowImagesLoaded = false;
+        
+        // DOM元素
+        const dropArea = document.getElementById('dropArea');
+        const skinUpload = document.getElementById('skinUpload');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileError = document.getElementById('fileError');
+        const shadowError = document.getElementById('shadowError');
+        const generateBtn = document.getElementById('generateBtn');
+        const originalSkinContainer = document.getElementById('originalSkinContainer');
+        const originalSkinCanvas = document.getElementById('originalSkinCanvas');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultCanvas = document.getElementById('resultCanvas');
+        const downloadContainer = document.getElementById('downloadContainer');
+        const downloadLink = document.getElementById('downloadLink');
+        const stepsContainer = document.getElementById('stepsContainer');
+        const backgroundSettings = document.getElementById('backgroundSettings');
+        const shadowSettings = document.getElementById('shadowSettings');
+        const sizeSettings = document.getElementById('sizeSettings');
+        const transparentBg = document.getElementById('transparentBg');
+        const colorBg = document.getElementById('bgColor');
+        const gradientBg = document.getElementById('gradientBg');
+        const gradientOption = document.getElementById('gradientOption');
+        const colorPickerContainer = document.getElementById('colorPickerContainer');
+        const gradientPickerContainer = document.getElementById('gradientPickerContainer');
+        const bgColorInput = document.getElementById('bgColor');
+        const bgHexInput = document.getElementById('bgHex');
+        const gradientColor1Input = document.getElementById('gradientColor1');
+        const gradientHex1Input = document.getElementById('gradientHex1');
+        const gradientColor2Input = document.getElementById('gradientColor2');
+        const gradientHex2Input = document.getElementById('gradientHex2');
+        const skinShadowCheckbox = document.getElementById('skinShadow');
+        const dropShadowCheckbox = document.getElementById('dropShadow');
+        const dropShadowContainer = document.getElementById('dropShadowContainer');
+        const size300Radio = document.getElementById('size300');
+        const size20Radio = document.getElementById('size20');
+        
+        // 初始化：加载阴影图片
+        function loadShadowImages() {
+            let loadedCount = 0;
+            const totalImages = 2;
+            
+            // 加载皮肤阴影图片
+            skinShadowImage = new Image();
+            skinShadowImage.crossOrigin = "anonymous";
+            skinShadowImage.onload = function() {
+                console.log('皮肤阴影图片加载成功');
+                loadedCount++;
+                checkAllImagesLoaded(loadedCount, totalImages);
+            };
+            skinShadowImage.onerror = function() {
+                console.error('皮肤阴影图片加载失败');
+                showShadowWarning('皮肤阴影图片加载失败 (skin_shadow.png)');
+                loadedCount++;
+                checkAllImagesLoaded(loadedCount, totalImages);
+            };
+            skinShadowImage.src = 'skin_shadow.png?' + new Date().getTime();
+            
+            // 加载头像阴影图片
+            dropShadowImage = new Image();
+            dropShadowImage.crossOrigin = "anonymous";
+            dropShadowImage.onload = function() {
+                console.log('头像阴影图片加载成功');
+                loadedCount++;
+                checkAllImagesLoaded(loadedCount, totalImages);
+            };
+            dropShadowImage.onerror = function() {
+                console.error('头像阴影图片加载失败');
+                showShadowWarning('头像阴影图片加载失败 (shadow.png)');
+                loadedCount++;
+                checkAllImagesLoaded(loadedCount, totalImages);
+            };
+            dropShadowImage.src = 'shadow.png?' + new Date().getTime();
+        }
+        
+        // 检查所有阴影图片是否加载完成
+        function checkAllImagesLoaded(loaded, total) {
+            if (loaded === total) {
+                shadowImagesLoaded = true;
+                updateUIState();
+            }
+        }
+        
+        // 显示阴影图片加载警告
+        function showShadowWarning(message) {
+            shadowError.textContent = message;
+            shadowError.classList.remove('hidden');
+        }
+        
+        // 处理文件上传
+        function handleFileUpload(file) {
+            if (!file.type.match('image/png')) {
+                showError('请上传PNG格式的图片文件');
+                return false;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    if (img.width !== 64 || img.height !== 64) {
+                        showError('图片尺寸必须为64x64像素');
+                        skinImage = null;
+                        updateUIState();
+                        return;
+                    }
+                    
+                    skinImage = img;
+                    showFileInfo(file.name);
+                    hideError();
+                    
+                    const ctx = originalSkinCanvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, 64, 64);
+                    
+                    updateUIState();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            return true;
+        }
+        
+        // 显示文件信息
+        function showFileInfo(fileName) {
+            fileInfo.textContent = `已选择: ${fileName}`;
+            fileInfo.classList.remove('hidden');
+        }
+        
+        // 显示错误信息
+        function showError(message) {
+            fileError.textContent = message;
+            fileError.classList.remove('hidden');
+        }
+        
+        // 隐藏错误信息
+        function hideError() {
+            fileError.classList.add('hidden');
+        }
+        
+        // 根据选择的尺寸更新相关选项的可见性
+        function updateOptionsVisibility() {
+            const isSmallSize = size20Radio.checked;
+            
+            // 控制渐变选项可见性
+            if (isSmallSize) {
+                gradientOption.classList.add('hidden');
+                gradientPickerContainer.classList.add('hidden');
+                
+                if (gradientBg.checked) {
+                    colorBg.checked = true;
+                    colorPickerContainer.classList.remove('hidden');
+                }
+            } else {
+                gradientOption.classList.remove('hidden');
+                if (gradientBg.checked) {
+                    gradientPickerContainer.classList.remove('hidden');
+                }
+            }
+            
+            // 控制头像阴影选项可见性
+            if (isSmallSize) {
+                dropShadowContainer.classList.add('hidden');
+                dropShadowCheckbox.checked = false;
+            } else {
+                dropShadowContainer.classList.remove('hidden');
+            }
+        }
+        
+        // 更新UI状态
+        function updateUIState() {
+            const hasValidSkin = skinImage !== null;
+            
+            generateBtn.disabled = !hasValidSkin || !shadowImagesLoaded;
+            
+            backgroundSettings.style.display = hasValidSkin ? 'block' : 'none';
+            shadowSettings.style.display = hasValidSkin ? 'block' : 'none';
+            sizeSettings.style.display = hasValidSkin ? 'block' : 'none';
+            
+            if (hasValidSkin) {
+                updateOptionsVisibility();
+            }
+            
+            originalSkinContainer.style.display = hasValidSkin ? 'block' : 'none';
+            stepsContainer.style.display = hasValidSkin ? 'none' : 'block';
+            
+            if (!hasValidSkin) {
+                resultContainer.style.display = 'none';
+                downloadContainer.style.display = 'none';
+            }
+        }
+        
+        // 解析十六进制颜色
+        function parseHex(hex) {
+            hex = hex.replace(/^#/, '');
+            if (hex.length !== 6) {
+                return null;
+            }
+            
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            
+            if (isNaN(r) || isNaN(g) || isNaN(b)) {
+                return null;
+            }
+            
+            return [r, g, b];
+        }
+        
+        // 同步颜色选择器
+        function syncColorInputs() {
+            bgColorInput.addEventListener('input', () => {
+                bgHexInput.value = bgColorInput.value.toUpperCase();
+            });
+            
+            bgHexInput.addEventListener('input', () => {
+                const hex = bgHexInput.value.trim();
+                if (/^#?[0-9A-Fa-f]{6}$/.test(hex)) {
+                    bgColorInput.value = hex.startsWith('#') ? hex : `#${hex}`;
+                }
+            });
+            
+            gradientColor1Input.addEventListener('input', () => {
+                gradientHex1Input.value = gradientColor1Input.value.toUpperCase();
+            });
+            
+            gradientHex1Input.addEventListener('input', () => {
+                const hex = gradientHex1Input.value.trim();
+                if (/^#?[0-9A-Fa-f]{6}$/.test(hex)) {
+                    gradientColor1Input.value = hex.startsWith('#') ? hex : `#${hex}`;
+                }
+            });
+            
+            gradientColor2Input.addEventListener('input', () => {
+                gradientHex2Input.value = gradientColor2Input.value.toUpperCase();
+            });
+            
+            gradientHex2Input.addEventListener('input', () => {
+                const hex = gradientHex2Input.value.trim();
+                if (/^#?[0-9A-Fa-f]{6}$/.test(hex)) {
+                    gradientColor2Input.value = hex.startsWith('#') ? hex : `#${hex}`;
+                }
+            });
+            
+            transparentBg.addEventListener('change', () => {
+                colorPickerContainer.classList.add('hidden');
+                gradientPickerContainer.classList.add('hidden');
+            });
+            
+            colorBg.addEventListener('change', () => {
+                colorPickerContainer.classList.remove('hidden');
+                gradientPickerContainer.classList.add('hidden');
+            });
+            
+            gradientBg.addEventListener('change', () => {
+                if (!size20Radio.checked) {
+                    colorPickerContainer.classList.add('hidden');
+                    gradientPickerContainer.classList.remove('hidden');
+                }
+            });
+            
+            size300Radio.addEventListener('change', updateOptionsVisibility);
+            size20Radio.addEventListener('change', updateOptionsVisibility);
+        }
+        
+        // 生成头像 - 优化渐变效果
+        function generateAvatar() {
+            const avatarSize = size300Radio.checked ? 300 : 20;
+            
+            // 对于300x300尺寸，直接在结果画布上创建渐变背景
+            if (avatarSize === 300) {
+                resultCanvas.width = 300;
+                resultCanvas.height = 300;
+                const resultCtx = resultCanvas.getContext('2d');
+                resultCtx.clearRect(0, 0, 300, 300);
+                resultCtx.imageSmoothingEnabled = false;
+                
+                // 1. 绘制背景 (300x300尺寸专用处理)
+                if (transparentBg.checked) {
+                    // 透明背景
+                    resultCtx.clearRect(0, 0, 300, 300);
+                } else if (colorBg.checked) {
+                    // 纯色背景
+                    let rgb = parseHex(bgHexInput.value) || [255, 255, 255];
+                    resultCtx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                    resultCtx.fillRect(0, 0, 300, 300);
+                } else if (gradientBg.checked) {
+                    // 渐变背景 (300x300尺寸专用)
+                    const color1 = parseHex(gradientHex1Input.value) || [255, 255, 255];
+                    const color2 = parseHex(gradientHex2Input.value) || [0, 0, 0];
+                    
+                    // 创建从左上角到右下角的渐变，应用于整个300x300画布
+                    const gradient = resultCtx.createLinearGradient(0, 0, 300, 300);
+                    gradient.addColorStop(0, `rgb(${color1[0]}, ${color1[1]}, ${color1[2]})`);
+                    gradient.addColorStop(1, `rgb(${color2[0]}, ${color2[1]}, ${color2[2]})`);
+                    
+                    resultCtx.fillStyle = gradient;
+                    resultCtx.fillRect(0, 0, 300, 300);
+                }
+                
+                // 2. 绘制头像阴影 (如果启用)
+                if (dropShadowCheckbox.checked && dropShadowImage && dropShadowImage.complete) {
+                    console.log('应用头像阴影');
+                    resultCtx.drawImage(dropShadowImage, 0, 0, 300, 300);
+                }
+                
+                // 3. 创建20x20的皮肤内容
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 20;
+                tempCanvas.height = 20;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.clearRect(0, 0, 20, 20);
+                
+                // 绘制皮肤各个部分
+                // 侧面脸
+                tempCtx.drawImage(skinImage, 5, 9, 3, 7, 5, 4, 3, 7);
+                // 外面部
+                tempCtx.drawImage(skinImage, 33, 9, 3, 7, 5, 4, 3, 7);
+                
+                // 正面脸
+                tempCtx.drawImage(skinImage, 8, 9, 7, 7, 8, 4, 7, 7);
+                // 外正面脸
+                tempCtx.drawImage(skinImage, 40, 9, 7, 7, 8, 4, 7, 7);
+                
+                // 左手
+                tempCtx.drawImage(skinImage, 37, 52, 2, 7, 13, 13, 2, 7);
+                // 外左手
+                tempCtx.drawImage(skinImage, 53, 52, 2, 7, 13, 13, 2, 7);
+                
+                // 身体
+                const bodyCanvas = document.createElement('canvas');
+                bodyCanvas.width = 8;
+                bodyCanvas.height = 9;
+                const bodyCtx = bodyCanvas.getContext('2d');
+                bodyCtx.drawImage(skinImage, 20, 20, 8, 9, 0, 0, 8, 9);
+                bodyCtx.clearRect(0, 0, 1, 1);  // (0,0)
+                bodyCtx.clearRect(7, 0, 1, 1); // (7,0)
+                tempCtx.drawImage(bodyCanvas, 6, 11, 8, 9);
+                
+                // 外身体
+                const outerBodyCanvas = document.createElement('canvas');
+                outerBodyCanvas.width = 8;
+                outerBodyCanvas.height = 9;
+                const outerBodyCtx = outerBodyCanvas.getContext('2d');
+                outerBodyCtx.drawImage(skinImage, 20, 36, 8, 9, 0, 0, 8, 9);
+                outerBodyCtx.clearRect(0, 0, 1, 1);  // (0,0)
+                outerBodyCtx.clearRect(7, 0, 1, 1); // (7,0)
+                tempCtx.drawImage(outerBodyCanvas, 6, 11, 8, 9);
+                
+                // 右手
+                tempCtx.drawImage(skinImage, 45, 20, 2, 7, 5, 13, 2, 7);
+                // 外右手
+                tempCtx.drawImage(skinImage, 45, 36, 2, 7, 5, 13, 2, 7);
+                
+                // 添加皮肤阴影
+                if (skinShadowCheckbox.checked && skinShadowImage && skinShadowImage.complete) {
+                    console.log('应用皮肤阴影');
+                    tempCtx.globalCompositeOperation = 'source-over';
+                    tempCtx.drawImage(skinShadowImage, 0, 0, 20, 20);
+                }
+                
+                // 4. 将20x20皮肤内容放大绘制到300x300结果画布上
+                resultCtx.globalCompositeOperation = 'source-over';
+                resultCtx.drawImage(tempCanvas, 0, 0, 20, 20, 0, 0, 300, 300);
+            } else {
+                // 对于20x20尺寸，使用简单处理
+                resultCanvas.width = 20;
+                resultCanvas.height = 20;
+                const resultCtx = resultCanvas.getContext('2d');
+                resultCtx.clearRect(0, 0, 20, 20);
+                resultCtx.imageSmoothingEnabled = false;
+                
+                // 1. 绘制背景 (仅纯色或透明)
+                if (!transparentBg.checked) {
+                    let rgb = parseHex(bgHexInput.value) || [255, 255, 255];
+                    resultCtx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                    resultCtx.fillRect(0, 0, 20, 20);
+                }
+                
+                // 2. 绘制皮肤各个部分
+                // 侧面脸
+                resultCtx.drawImage(skinImage, 5, 9, 3, 7, 5, 4, 3, 7);
+                // 外面部
+                resultCtx.drawImage(skinImage, 33, 9, 3, 7, 5, 4, 3, 7);
+                
+                // 正面脸
+                resultCtx.drawImage(skinImage, 8, 9, 7, 7, 8, 4, 7, 7);
+                // 外正面脸
+                resultCtx.drawImage(skinImage, 40, 9, 7, 7, 8, 4, 7, 7);
+                
+                // 左手
+                resultCtx.drawImage(skinImage, 37, 52, 2, 7, 13, 13, 2, 7);
+                // 外左手
+                resultCtx.drawImage(skinImage, 53, 52, 2, 7, 13, 13, 2, 7);
+                
+                // 身体
+                const bodyCanvas = document.createElement('canvas');
+                bodyCanvas.width = 8;
+                bodyCanvas.height = 9;
+                const bodyCtx = bodyCanvas.getContext('2d');
+                bodyCtx.drawImage(skinImage, 20, 20, 8, 9, 0, 0, 8, 9);
+                bodyCtx.clearRect(0, 0, 1, 1);  // (0,0)
+                bodyCtx.clearRect(7, 0, 1, 1); // (7,0)
+                resultCtx.drawImage(bodyCanvas, 6, 11, 8, 9);
+                
+                // 外身体
+                const outerBodyCanvas = document.createElement('canvas');
+                outerBodyCanvas.width = 8;
+                outerBodyCanvas.height = 9;
+                const outerBodyCtx = outerBodyCanvas.getContext('2d');
+                outerBodyCtx.drawImage(skinImage, 20, 36, 8, 9, 0, 0, 8, 9);
+                outerBodyCtx.clearRect(0, 0, 1, 1);  // (0,0)
+                outerBodyCtx.clearRect(7, 0, 1, 1); // (7,0)
+                resultCtx.drawImage(outerBodyCanvas, 6, 11, 8, 9);
+                
+                // 右手
+                resultCtx.drawImage(skinImage, 45, 20, 2, 7, 5, 13, 2, 7);
+                // 外右手
+                resultCtx.drawImage(skinImage, 45, 36, 2, 7, 5, 13, 2, 7);
+                
+                // 3. 添加皮肤阴影
+                if (skinShadowCheckbox.checked && skinShadowImage && skinShadowImage.complete) {
+                    console.log('应用皮肤阴影');
+                    resultCtx.globalCompositeOperation = 'source-over';
+                    resultCtx.drawImage(skinShadowImage, 0, 0, 20, 20);
+                }
+            }
+            
+            // 设置下载文件名
+            const fileName = avatarSize === 300 ? 'minecraft_avatar.png' : 'minecraft_avatar_Template.png';
+            downloadLink.download = fileName;
+            
+            // 显示结果和下载按钮
+            resultContainer.style.display = 'block';
+            downloadContainer.style.display = 'block';
+            
+            // 更新下载链接
+            downloadLink.href = resultCanvas.toDataURL('image/png');
+        }
+        
+        // 事件监听
+        dropArea.addEventListener('click', () => {
+            skinUpload.click();
+        });
+        
+        skinUpload.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+        
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('border-primary');
+        });
+        
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('border-primary');
+        });
+        
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('border-primary');
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFileUpload(e.dataTransfer.files[0]);
+            }
+        });
+        
+        generateBtn.addEventListener('click', generateAvatar);
+        
+        // 初始化颜色输入同步
+        syncColorInputs();
+        
+        // 初始化：加载阴影图片
+        loadShadowImages();
+        updateUIState();
+    </script>
+</body>
+</html>
+    

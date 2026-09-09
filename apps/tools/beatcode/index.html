@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BeatCode · JSON 音乐编译器</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0a0f;
+      color: #e0e0ff;
+      font-family: 'Segoe UI', 'JetBrains Mono', monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    :root {
+      --accent: #00f0ff;
+      --border: #2a2a3e;
+      --bg: #111118;
+    }
+    .header {
+      height: 48px;
+      background: #07070c;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 5px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: .2s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: #000; border: none; font-weight: 600; }
+    .btn.primary:hover { background: #80f7ff; }
+    .main { flex: 1; display: flex; overflow: hidden; }
+    .editor-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0d0d14;
+      padding: 12px;
+      gap: 8px;
+      overflow: hidden;
+    }
+    .editor-panel .label {
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .editor-panel .label span { color: var(--accent); }
+    .editor-panel textarea {
+      flex: 1;
+      background: #000;
+      border: 1px solid var(--border);
+      color: #0f0;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      padding: 12px;
+      border-radius: 6px;
+      resize: none;
+      width: 100%;
+      tab-size: 2;
+      line-height: 1.6;
+      min-height: 200px;
+    }
+    .editor-panel textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+    .editor-panel textarea::placeholder { color: #444; }
+    .output-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0a0a0f;
+      padding: 12px;
+      gap: 8px;
+      border-left: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .output-panel .label {
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+    }
+    .output-panel .log {
+      flex: 1;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #aaa;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    .output-panel .log .ok { color: #0f0; }
+    .output-panel .log .err { color: #ff4466; }
+    .output-panel .log .info { color: var(--accent); }
+    .output-panel .log .warn { color: #ffaa00; }
+    .bottom-bar {
+      height: 40px;
+      background: #07070c;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 16px;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: #888;
+    }
+    .bottom-bar .status { color: var(--accent); }
+    .badge { font-size: 11px; background: #1a1a2e; padding: 2px 10px; border-radius: 12px; }
+
+    .export-selector {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 3px 8px;
+    }
+    .export-selector label {
+      font-size: 12px;
+      color: #888;
+      cursor: pointer;
+    }
+    .export-selector input[type="radio"] {
+      accent-color: var(--accent);
+      cursor: pointer;
+      width: 14px;
+      height: 14px;
+    }
+    #fileInput { display: none; }
+    .header-separator {
+      width: 1px;
+      height: 28px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-weight:700;color:var(--accent);letter-spacing:1px;">🎵 BeatCode</span>
+  <span style="font-size:12px;color:#555;">JSON → 音频编译器</span>
+  <div style="flex:1"></div>
+  <button class="btn primary" id="compileBtn">▶ 编译并播放</button>
+  <button class="btn" id="stopBtn">⏹ 停止</button>
+  <div class="export-selector">
+    <label><input type="radio" name="exportFormat" value="wav" checked> WAV</label>
+    <label><input type="radio" name="exportFormat" value="mp3"> MP3</label>
+  </div>
+  <button class="btn" id="exportBtn">💾 导出音频</button>
+  <div class="header-separator"></div>
+  <button class="btn" id="exportJsonBtn">📤 导出 JSON</button>
+  <button class="btn" id="importBtn">📂 导入 JSON</button>
+  <button class="btn" id="loadDemoBtn">📄 示例</button>
+  <input type="file" id="fileInput" accept=".json">
+</div>
+
+<div class="main">
+  <div class="editor-panel">
+    <div class="label">
+      <span>📝 BeatCode JSON</span>
+      <span>manifest / macro(可选) / music</span>
+    </div>
+    <textarea id="jsonInput" spellcheck="false" placeholder="在此粘贴或编写 BeatCode JSON..."></textarea>
+  </div>
+  <div class="output-panel">
+    <div class="label">
+      <span>📋 编译日志</span>
+      <span id="segmentCount">片段: 0</span>
+    </div>
+    <div class="log" id="logOutput">等待编译…</div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <span class="status" id="playStatus">⏹ 停止</span>
+  <span class="badge" id="durationDisplay">时长: 0.00s</span>
+  <span style="flex:1"></span>
+  <span style="font-size:11px;color:#444;">Ctrl+Enter 编译播放</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js">
+</script>
+<script>
+  (function() {
+    // ----- DOM refs -----
+    const jsonInput = document.getElementById('jsonInput');
+    const logOutput = document.getElementById('logOutput');
+    const segmentCount = document.getElementById('segmentCount');
+    const durationDisplay = document.getElementById('durationDisplay');
+    const playStatus = document.getElementById('playStatus');
+    const exportFormatRadios = document.querySelectorAll('input[name="exportFormat"]');
+    const fileInput = document.getElementById('fileInput');
+
+    // ----- 音频引擎 -----
+    let audioCtx = null;
+    let isPlaying = false;
+    let globalSampleIndex = 0;
+    let masterNode = null;
+    let masterGain = null;
+    let currentSegments = [];
+
+    // ----- LaTeX 编译器 -----
+    function findMatchingBrace(str, start) {
+      let depth = 1;
+      for (let i = start; i < str.length; i++) {
+        if (str[i] === '{') depth++;
+        else if (str[i] === '}') {
+          depth--;
+          if (depth === 0) return i;
+        }
+      }
+      return -1;
+    }
+    function processLatexCommands(expr) {
+      let result = expr;
+      let idx = result.indexOf('\\frac');
+      while (idx !== -1) {
+        const open1 = result.indexOf('{', idx + 5);
+        if (open1 === -1) break;
+        const close1 = findMatchingBrace(result, open1 + 1);
+        if (close1 === -1) break;
+        const open2 = result.indexOf('{', close1 + 1);
+        if (open2 === -1) break;
+        const close2 = findMatchingBrace(result, open2 + 1);
+        if (close2 === -1) break;
+        const num = result.slice(open1 + 1, close1);
+        const den = result.slice(open2 + 1, close2);
+        result = result.slice(0, idx) + `((${num})/(${den}))` + result.slice(close2 + 1);
+        idx = result.indexOf('\\frac');
+      }
+      idx = result.indexOf('\\sqrt');
+      while (idx !== -1) {
+        const open = result.indexOf('{', idx + 5);
+        if (open === -1) break;
+        const close = findMatchingBrace(result, open + 1);
+        if (close === -1) break;
+        const content = result.slice(open + 1, close);
+        result = result.slice(0, idx) + `Math.sqrt(${content})` + result.slice(close + 1);
+        idx = result.indexOf('\\sqrt');
+      }
+      idx = result.indexOf('\\abs');
+      while (idx !== -1) {
+        const open = result.indexOf('{', idx + 4);
+        if (open === -1) break;
+        const close = findMatchingBrace(result, open + 1);
+        if (close === -1) break;
+        const content = result.slice(open + 1, close);
+        result = result.slice(0, idx) + `Math.abs(${content})` + result.slice(close + 1);
+        idx = result.indexOf('\\abs');
+      }
+      return result;
+    }
+    function latexToJS(expr) {
+      let js = expr.replace(/\$/g, '');
+      js = processLatexCommands(js);
+      js = js.replace(/\\sin/g, 'Math.sin')
+             .replace(/\\cos/g, 'Math.cos')
+             .replace(/\\tan/g, 'Math.tan')
+             .replace(/\\log/g, 'Math.log10')
+             .replace(/\\ln/g, 'Math.log')
+             .replace(/\\exp/g, 'Math.exp')
+             .replace(/\\arcsin/g, 'Math.asin')
+             .replace(/\\arccos/g, 'Math.acos')
+             .replace(/\\arctan/g, 'Math.atan')
+             .replace(/\\pi/g, 'Math.PI')
+             .replace(/\\cdot/g, '*')
+             .replace(/\\times/g, '*')
+             .replace(/\\div/g, '/')
+             .replace(/\\left\(/g, '(')
+             .replace(/\\right\)/g, ')')
+             .replace(/\\left\[/g, '[')
+             .replace(/\\right\]/g, ']')
+             .replace(/\\lfloor/g, 'Math.floor(')
+             .replace(/\\rfloor/g, ')')
+             .replace(/\\lceil/g, 'Math.ceil(')
+             .replace(/\\rceil/g, ')');
+      js = js.replace(/\^\{([^}]*)\}/g, '**($1)');
+      js = js.replace(/\^([a-zA-Z0-9.]+)/g, '**$1');
+      js = js.replace(/\be\b(?![a-zA-Z0-9_])/g, 'Math.E');
+      return js;
+    }
+    function compileFormula(code) {
+      try {
+        const js = latexToJS(code);
+        const fn = new Function('t', `with(Math) { return (${js}); }`);
+        fn(0);
+        return fn;
+      } catch(e) {
+        return null;
+      }
+    }
+    function evalCompiled(fn, t) {
+      try {
+        let v = fn(t);
+        if (!isFinite(v)) return 0;
+        return Math.max(-1, Math.min(1, v));
+      } catch(e) { return 0; }
+    }
+
+    // ----- 验证日期格式 -----
+    function validateDate(dateStr) {
+      if (!dateStr) return { ok: true };
+      const patterns = [
+        /^\d{4}-\d{2}-\d{2}$/,
+        /^\d{4}-\d{2}$/,
+        /^\d{4}$/
+      ];
+      for (const p of patterns) {
+        if (p.test(dateStr)) return { ok: true };
+      }
+      return { ok: false, msg: `日期格式 "${dateStr}" 不符合 YYYY-MM-DD, YYYY-MM, YYYY 格式` };
+    }
+
+    // ----- 编译 BeatCode JSON -----
+    function compileBeatCode(jsonStr) {
+      let errors = [];
+      let warnings = [];
+      let segments = [];
+      let manifest = {};
+
+      try {
+        const data = JSON.parse(jsonStr);
+
+        if (!data.manifest || !data.manifest.project) {
+          errors.push('❌ manifest.project 是必填字段');
+        } else {
+          manifest = data.manifest;
+          if (manifest.date) {
+            const dateCheck = validateDate(manifest.date);
+            if (!dateCheck.ok) {
+              errors.push(`❌ ${dateCheck.msg}`);
+            }
+          }
+        }
+
+        const macros = {};
+        if (data.macro) {
+          for (const [macroName, macroData] of Object.entries(data.macro)) {
+            if (!Array.isArray(macroData)) {
+              warnings.push(`⚠️ 宏 "${macroName}" 不是数组，已跳过`);
+              continue;
+            }
+            macros[macroName] = [];
+            for (let i = 0; i < macroData.length; i++) {
+              const item = macroData[i];
+              const result = parseSegment(item, `宏 "${macroName}" 片段 ${i}`);
+              if (result.ok) {
+                macros[macroName].push(result.segment);
+              } else {
+                errors.push(...result.errors);
+              }
+            }
+          }
+        }
+
+        if (!data.music || !Array.isArray(data.music)) {
+          errors.push('❌ music 必须是数组');
+          return { segments, errors, warnings, manifest, ok: false };
+        }
+
+        function expandMacro(item) {
+          if (typeof item === 'string') {
+            const macroName = item;
+            if (!macros[macroName]) {
+              errors.push(`❌ 未找到宏 "${macroName}"`);
+              return [];
+            }
+            return macros[macroName].map(seg => ({
+              ...seg,
+              _fromMacro: macroName
+            }));
+          } else if (typeof item === 'object' && item !== null) {
+            const result = parseSegment(item, `music 片段`);
+            if (result.ok) {
+              return [result.segment];
+            } else {
+              errors.push(...result.errors);
+              return [];
+            }
+          } else {
+            errors.push(`❌ music 项无效: ${JSON.stringify(item)}`);
+            return [];
+          }
+        }
+
+        for (let i = 0; i < data.music.length; i++) {
+          const item = data.music[i];
+          const expanded = expandMacro(item);
+          for (const seg of expanded) {
+            segments.push(seg);
+          }
+        }
+
+        segments.sort((a, b) => a.start - b.start);
+
+        if (segments.length === 0 && errors.length === 0) {
+          warnings.push('⚠️ 没有有效的音频片段');
+        }
+
+        return { segments, errors, warnings, manifest, ok: errors.length === 0 };
+      } catch(e) {
+        errors.push(`❌ JSON 解析错误: ${e.message}`);
+        return { segments: [], errors, warnings, manifest, ok: false };
+      }
+    }
+
+    // ----- 解析单个片段 -----
+    function parseSegment(item, context) {
+      const errors = [];
+      const start = parseFloat(item.start);
+      const end = parseFloat(item.end);
+      const funcStr = item.function || '';
+      const note = item.note || '';
+      const volume = item.volume !== undefined ? parseFloat(item.volume) : 100;
+      const speed = item.speed !== undefined ? parseFloat(item.speed) : 1;
+
+      if (isNaN(start) || isNaN(end)) {
+        errors.push(`❌ ${context}: start 或 end 不是有效数字`);
+        return { ok: false, errors };
+      }
+      if (end <= start) {
+        errors.push(`❌ ${context}: end (${end}) 必须大于 start (${start})`);
+        return { ok: false, errors };
+      }
+      if (!funcStr || funcStr.trim() === '') {
+        errors.push(`❌ ${context}: function 不能为空`);
+        return { ok: false, errors };
+      }
+      if (isNaN(volume) || volume <= 0) {
+        errors.push(`❌ ${context}: volume 必须是正数，当前 ${volume}`);
+        return { ok: false, errors };
+      }
+      if (isNaN(speed) || speed <= 0) {
+        errors.push(`❌ ${context}: speed 必须是正数，当前 ${speed}`);
+        return { ok: false, errors };
+      }
+
+      const compiled = compileFormula(funcStr);
+      if (!compiled) {
+        errors.push(`❌ ${context}: 公式编译失败 "${funcStr}"`);
+        return { ok: false, errors };
+      }
+
+      return {
+        ok: true,
+        segment: {
+          start,
+          end,
+          function: funcStr,
+          note,
+          compiled,
+          volume: volume / 100,
+          speed: speed,
+          _raw: item
+        }
+      };
+    }
+
+    // ----- 渲染日志 -----
+    function renderLog(result) {
+      const lines = [];
+      const { manifest } = result;
+
+      if (manifest && manifest.project) {
+        lines.push(`📁 项目: ${manifest.project}`);
+        if (manifest.name) lines.push(`  名称: ${manifest.name}`);
+        if (manifest.author) lines.push(`  作者: ${manifest.author}`);
+        if (manifest.title) lines.push(`  专辑: ${manifest.title}`);
+        if (manifest.genre) lines.push(`  流派: ${manifest.genre}`);
+        if (manifest.date) lines.push(`  日期: ${manifest.date}`);
+        lines.push('');
+      }
+
+      if (result.errors.length) {
+        lines.push(...result.errors);
+      }
+      if (result.warnings.length) {
+        lines.push(...result.warnings);
+      }
+      if (result.ok && result.segments.length > 0) {
+        lines.push(`✅ 编译成功，${result.segments.length} 个片段`);
+        let totalDuration = 0;
+        for (const seg of result.segments) {
+          const dur = seg.end - seg.start;
+          if (seg.end > totalDuration) totalDuration = seg.end;
+          const vol = Math.round(seg.volume * 100);
+          const speed = seg.speed;
+          const noteInfo = seg.note ? ` "${seg.note}"` : '';
+          const macroInfo = seg._fromMacro ? ` [宏:${seg._fromMacro}]` : '';
+          lines.push(`   ${seg.start.toFixed(2)}s → ${seg.end.toFixed(2)}s (${dur.toFixed(2)}s) vol:${vol}% speed:${speed.toFixed(2)}x${noteInfo}${macroInfo}`);
+        }
+        durationDisplay.textContent = `时长: ${totalDuration.toFixed(2)}s`;
+        segmentCount.textContent = `片段: ${result.segments.length}`;
+      } else if (result.ok && result.segments.length === 0) {
+        lines.push('⚠️ 没有有效片段');
+      }
+      logOutput.innerHTML = lines.map(l => {
+        if (l.startsWith('❌')) return `<span class="err">${l}</span>`;
+        if (l.startsWith('✅')) return `<span class="ok">${l}</span>`;
+        if (l.startsWith('⚠️')) return `<span class="warn">${l}</span>`;
+        if (l.startsWith('📁') || l.startsWith('  名称') || l.startsWith('  作者') || l.startsWith('  专辑') || l.startsWith('  流派') || l.startsWith('  日期')) return `<span class="info">${l}</span>`;
+        return l;
+      }).join('\n');
+      logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    // ----- 播放引擎 -----
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function getTotalDuration(segs) {
+      let maxEnd = 0;
+      for (const s of segs) if (s.end > maxEnd) maxEnd = s.end;
+      return maxEnd;
+    }
+
+    function playSegments(segs) {
+      if (segs.length === 0) {
+        logOutput.innerHTML += '\n⚠️ 没有片段可播放';
+        return;
+      }
+      initAudio();
+      if (isPlaying) stopPlayback();
+
+      const totalDur = getTotalDuration(segs);
+      if (totalDur <= 0) return;
+
+      isPlaying = true;
+      playStatus.textContent = '▶ 播放中';
+      globalSampleIndex = 0;
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.7;
+      masterGain.connect(audioCtx.destination);
+
+      const bufferSize = 4096;
+      masterNode = audioCtx.createScriptProcessor(bufferSize, 0, 1);
+      const sampleRate = audioCtx.sampleRate;
+
+      let localSegs = segs.slice();
+
+      masterNode.onaudioprocess = function(e) {
+        const out = e.outputBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          const globalTime = (globalSampleIndex + i) / sampleRate;
+          let mix = 0;
+          for (const seg of localSegs) {
+            if (globalTime >= seg.start && globalTime < seg.end) {
+              const localTime = globalTime - seg.start;
+              const sample = evalCompiled(seg.compiled, localTime * seg.speed);
+              mix += sample * seg.volume;
+            }
+          }
+          out[i] = Math.tanh(mix * 0.6) * 0.9;
+        }
+        globalSampleIndex += bufferSize;
+      };
+
+      masterNode.connect(masterGain);
+
+      const stopTime = totalDur + 0.5;
+      setTimeout(() => {
+        if (isPlaying) stopPlayback();
+      }, stopTime * 1000 + 200);
+    }
+
+    function stopPlayback() {
+      isPlaying = false;
+      playStatus.textContent = '⏹ 停止';
+      if (masterNode) { masterNode.disconnect(); masterNode = null; }
+      if (masterGain) { masterGain.disconnect(); masterGain = null; }
+    }
+
+    // ----- 导出音频 -----
+    function renderAudioBuffer(segs, sampleRate) {
+      const totalDur = getTotalDuration(segs);
+      if (totalDur <= 0) return null;
+      const totalSamples = Math.floor(totalDur * sampleRate);
+      const buffer = new Float32Array(totalSamples);
+      for (let i = 0; i < totalSamples; i++) {
+        const t = i / sampleRate;
+        let mix = 0;
+        for (const seg of segs) {
+          if (t >= seg.start && t < seg.end) {
+            const local = t - seg.start;
+            mix += evalCompiled(seg.compiled, local * seg.speed) * seg.volume;
+          }
+        }
+        buffer[i] = Math.tanh(mix * 0.6) * 0.9;
+      }
+      return buffer;
+    }
+
+    function getExportFilename(manifest, ext) {
+      let filename = manifest?.project || 'beatcode';
+      if (manifest?.author) filename += `_${manifest.author}`;
+      if (manifest?.date) filename += `_${manifest.date}`;
+      if (manifest?.name) filename += `_${manifest.name}`;
+      filename = filename.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
+      return `${filename}.${ext}`;
+    }
+
+    function exportWav(segs, manifest) {
+      const sampleRate = 44100;
+      const audioBuffer = renderAudioBuffer(segs, sampleRate);
+      if (!audioBuffer) return;
+      downloadWav(audioBuffer, sampleRate, getExportFilename(manifest, 'wav'));
+    }
+
+    function downloadWav(audioBuffer, sampleRate, filename) {
+      const numChannels = 1;
+      const numFrames = audioBuffer.length;
+      const bytesPerSample = 2;
+      const blockAlign = numChannels * bytesPerSample;
+      const byteRate = sampleRate * blockAlign;
+      const dataSize = numFrames * blockAlign;
+      const buffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buffer);
+      function writeString(offset, string) {
+        for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+      }
+      writeString(0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(8, 'WAVE');
+      writeString(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true);
+      writeString(36, 'data');
+      view.setUint32(40, dataSize, true);
+      let offset = 44;
+      for (let i = 0; i < numFrames; i++) {
+        const s = Math.max(-1, Math.min(1, audioBuffer[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
+      const blob = new Blob([buffer], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportMp3(segs, manifest) {
+      if (typeof lamejs === 'undefined') {
+        alert('⚠️ MP3 编码库加载失败，请检查网络连接后重试');
+        return;
+      }
+      const sampleRate = 44100;
+      const audioBuffer = renderAudioBuffer(segs, sampleRate);
+      if (!audioBuffer) return;
+
+      const mp3encoder = new lamejs.Mp3Encoder(1, sampleRate, 192);
+      const samples = new Int16Array(audioBuffer.length);
+      for (let i = 0; i < audioBuffer.length; i++) {
+        const s = Math.max(-1, Math.min(1, audioBuffer[i]));
+        samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+
+      const mp3Data = [];
+      const blockSize = 1152;
+      for (let i = 0; i < samples.length; i += blockSize) {
+        const chunk = samples.subarray(i, i + blockSize);
+        const mp3buf = mp3encoder.encodeBuffer(chunk);
+        if (mp3buf.length > 0) mp3Data.push(new Int8Array(mp3buf));
+      }
+      const mp3buf = mp3encoder.flush();
+      if (mp3buf.length > 0) mp3Data.push(new Int8Array(mp3buf));
+
+      const blob = new Blob(mp3Data, { type: 'audio/mp3' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = getExportFilename(manifest, 'mp3');
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportAudio() {
+      if (currentSegments.length === 0) {
+        alert('请先编译或加载示例');
+        return;
+      }
+      let format = 'wav';
+      for (const radio of exportFormatRadios) {
+        if (radio.checked) { format = radio.value; break; }
+      }
+      if (format === 'mp3') {
+        exportMp3(currentSegments, lastManifest);
+      } else {
+        exportWav(currentSegments, lastManifest);
+      }
+    }
+
+    // ----- 导出 JSON -----
+    function exportJson() {
+      const content = jsonInput.value.trim();
+      if (!content) {
+        alert('没有可导出的 JSON 内容');
+        return;
+      }
+      try {
+        const data = JSON.parse(content);
+        const projectName = data?.manifest?.project || 'beatcode';
+        const filename = projectName.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_') + '.json';
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        logOutput.innerHTML += `\n<span class="ok">✅ JSON 已导出为: ${filename}</span>`;
+      } catch(e) {
+        alert('❌ JSON 格式无效，无法导出: ' + e.message);
+      }
+    }
+
+    // ----- 导入 JSON -----
+    function importJsonFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const content = e.target.result;
+          JSON.parse(content);
+          jsonInput.value = content;
+          logOutput.innerHTML = '<span class="ok">✅ JSON 文件导入成功，点击「编译并播放」或按 Ctrl+Enter 开始</span>';
+          const result = compileBeatCode(content);
+          lastManifest = result.manifest;
+          renderLog(result);
+          if (result.ok && result.segments.length > 0) {
+            currentSegments = result.segments;
+            playStatus.textContent = '⏹ 已就绪 (点击播放)';
+            segmentCount.textContent = `片段: ${result.segments.length}`;
+            const totalDur = getTotalDuration(result.segments);
+            durationDisplay.textContent = `时长: ${totalDur.toFixed(2)}s`;
+          }
+        } catch(err) {
+          logOutput.innerHTML = `<span class="err">❌ 导入失败: ${err.message}</span>`;
+        }
+      };
+      reader.onerror = function() {
+        logOutput.innerHTML = '<span class="err">❌ 读取文件失败</span>';
+      };
+      reader.readAsText(file);
+    }
+
+    // ----- 主流程 -----
+    let lastManifest = {};
+    function compileAndPlay() {
+      const jsonStr = jsonInput.value;
+      if (!jsonStr.trim()) {
+        logOutput.innerHTML = '<span class="warn">⚠️ 请先输入、导入或加载 BeatCode JSON</span>';
+        return;
+      }
+      const result = compileBeatCode(jsonStr);
+      lastManifest = result.manifest;
+      renderLog(result);
+      if (result.ok && result.segments.length > 0) {
+        currentSegments = result.segments;
+        if (isPlaying) stopPlayback();
+        playSegments(result.segments);
+      } else {
+        playStatus.textContent = '⏹ 停止 (编译失败)';
+      }
+    }
+
+    function loadDemo() {
+      jsonInput.value = `{
+  "manifest": {
+    "project": "MyBeat",
+    "name": "示例音乐",
+    "author": "BeatCode",
+    "title": "Demo Album",
+    "genre": "Electronic",
+    "date": "2026-08-20"
+  },
+  "macro": {
+    "bass": [
+      { "start": 0, "end": 4, "function": "\\\\sin(2 \\\\cdot \\\\pi \\\\cdot 110 \\\\cdot t) \\\\cdot e^{-0.3 \\\\cdot t}", "volume": 120, "speed": 1, "note": "低音" }
+    ],
+    "lead": [
+      { "start": 0, "end": 2, "function": "\\\\sin(2 \\\\cdot \\\\pi \\\\cdot 440 \\\\cdot t)", "volume": 100, "note": "A4" },
+      { "start": 2, "end": 4, "function": "\\\\sin(2 \\\\cdot \\\\pi \\\\cdot 554 \\\\cdot t)", "volume": 80, "note": "C#5" }
+    ],
+    "chord": [
+      { "start": 0, "end": 3, "function": "\\\\frac{\\\\sin(2 \\\\cdot \\\\pi \\\\cdot 440 \\\\cdot t) + \\\\sin(2 \\\\cdot \\\\pi \\\\cdot 554 \\\\cdot t)}{2}", "volume": 130, "note": "和弦" }
+    ]
+  },
+  "music": [
+    { "start": 0, "end": 6, "function": "\\\\sin(2 \\\\cdot \\\\pi \\\\cdot 880 \\\\cdot t) \\\\cdot \\\\sin(2 \\\\cdot \\\\pi \\\\cdot 5 \\\\cdot t)", "volume": 90, "speed": 1.2, "note": "颤音" },
+    "bass",
+    { "start": 1, "end": 5, "function": "\\\\sin(2 \\\\cdot \\\\pi \\\\cdot 220 \\\\cdot t) \\\\cdot e^{-0.5 \\\\cdot t}", "volume": 100, "note": "中音" },
+    "lead",
+    "chord"
+  ]
+}`;
+      const result = compileBeatCode(jsonInput.value);
+      lastManifest = result.manifest;
+      renderLog(result);
+      if (result.ok && result.segments.length > 0) {
+        currentSegments = result.segments;
+        playStatus.textContent = '⏹ 已就绪 (点击播放)';
+        segmentCount.textContent = `片段: ${result.segments.length}`;
+        const totalDur = getTotalDuration(result.segments);
+        durationDisplay.textContent = `时长: ${totalDur.toFixed(2)}s`;
+      }
+    }
+
+    function resetToBlank() {
+      jsonInput.value = '';
+      logOutput.innerHTML = '等待编译…';
+      segmentCount.textContent = '片段: 0';
+      durationDisplay.textContent = '时长: 0.00s';
+      playStatus.textContent = '⏹ 停止';
+      currentSegments = [];
+      lastManifest = {};
+    }
+
+    // ----- 事件绑定 -----
+    document.getElementById('compileBtn').addEventListener('click', compileAndPlay);
+    document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+    document.getElementById('exportBtn').addEventListener('click', exportAudio);
+    document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
+    document.getElementById('loadDemoBtn').addEventListener('click', loadDemo);
+
+    document.getElementById('importBtn').addEventListener('click', () => {
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        importJsonFile(e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        compileAndPlay();
+      }
+    });
+
+    resetToBlank();
+  })();
+</script>
+</body>
+</html>

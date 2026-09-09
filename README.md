@@ -1,2 +1,2 @@
-# appsblog
-onlie apps center
+# Apps Center
+此博客专门存放各种在线有趣的小应用，这些应用大多离线存放在页面的同目录，想查看的可以点击右上角的章鱼猫前往官方仓库
